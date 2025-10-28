@@ -1,9 +1,16 @@
 name: Deploy Terraform to AWS
 
 on:
-  push:
-    branches:
-      - main # Trigger the workflow when there's a push to the main branch
+  workflow_dispatch: # Allow manual triggering of the workflow
+    inputs:
+      action:
+        description: "Terraform action to perform (apply or destroy)"
+        required: true
+        default: "apply"
+        type: choice
+        options:
+          - apply
+          - destroy
 
 permissions:
   id-token: write # Allow the workflow to request OIDC tokens.
@@ -44,6 +51,13 @@ jobs:
         run: terraform plan -out=tfplan
 
       # Step 7: Apply Terraform changes (requires approval if using auto-approve)
-      - name: Terraform Apply
-        if: github.ref == 'refs/heads/main' # Only run on main branch
-        run: terraform apply -auto-approve tfplan # Use `-auto-approve` to skip manual approval
+      - name: Terraform Apply or Destroy
+        run: |
+          if [ "${{ github.event.inputs.actions }}" == "apply" ]; then
+            terraform apply -auto-approve tfplan
+          elif [ "${{ github.event.inputs.actions }}" == "destroy" ]; then
+            terraform destroy -auto-approve
+          else
+            echo "Invalid action : ${{ github.event.inputs.actions }}"
+            exit 1
+          fi
