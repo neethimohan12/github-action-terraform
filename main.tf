@@ -1,5 +1,5 @@
 resource "aws_s3_bucket" "my_bucket" {
-  bucket = "${var.bucket_name}-$(random_id.rand.hex)"
+  bucket = "${lower(var.bucket_name)}-${lower(random_id.rand.hex)}"
 }
 
 resource "random_id" "rand" {
