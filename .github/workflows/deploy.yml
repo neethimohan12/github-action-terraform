@@ -1,0 +1,49 @@
+name: Deploy Terraform to AWS
+
+on:
+  push:
+    branches:
+      - main # Trigger the workflow when there's a push to the main branch
+
+permissions:
+  id-token: write # Allow the workflow to request OIDC tokens.
+  contents: read # Allow the workflow to read repository contents
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest # Use the latest Ubuntu runner
+
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # Step 2: Set up AWS credentials for Terraform (you can store this in GitHub Secrets)
+      - name: Configure AWS credentials from I AM Role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # Step 3: Set up Terraform CLI
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.0" # Specify the Terraform version you want to use
+
+      # Step 4: Initialize Terraform
+      - name: Terraform Init
+        run: terraform init
+
+      # Step 5: Validate the Terraform configuration (Optional)
+      - name: Terraform Validate
+        run: terraform validate
+
+      # Step 6: Plan the deployment (Optional: Only for testing before applying)
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+
+      # Step 7: Apply Terraform changes (requires approval if using auto-approve)
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main' # Only run on main branch
+        run: terraform apply -auto-approve tfplan # Use `-auto-approve` to skip manual approval
